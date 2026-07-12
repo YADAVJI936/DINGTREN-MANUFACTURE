@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B2B Client Ordering Portal</title>
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-surface: #1e293b;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --radius: 12px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        
+        .login-card { background: var(--bg-surface); padding: 40px; border-radius: var(--radius); width: 100%; max-width: 440px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .form-group { margin-bottom: 20px; display: flex; flex-direction: column; }
+        .form-group label { font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); text-transform: uppercase; }
+        input, textarea { background: #0f172a; border: 1px solid var(--border); color: white; padding: 12px 16px; border-radius: 8px; font-size: 1rem; width: 100%; }
+        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+        
+        button { background-color: var(--accent); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        button:hover { background-color: var(--accent-hover); }
+        button.btn-success { background-color: var(--success); }
+        
+        .portal-container { display: none; width: 100%; max-width: 1200px; grid-template-columns: 1.5fr 1fr; gap: 30px; }
+        @media (max-width: 900px) { .portal-container { grid-template-columns: 1fr; } }
+        
+        .panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 24px; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+        
+        .catalog-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; background: rgba(15, 23, 42, 0.4); }
+        .qty-input { width: 80px; text-align: center; }
+        
+        .ledger-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .ledger-box { background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
+        
+        .order-history-card, .query-log-card { border: 1px solid var(--border); background: rgba(15, 23, 42, 0.2); padding: 16px; border-radius: 8px; margin-bottom: 10px; }
+        .badge { font-size: 0.75rem; padding: 4px 8px; border-radius: 9999px; font-weight: 700; text-transform: uppercase; }
+        .badge-pending { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card" id="login-window">
+        <h2>Dingtren Terminal Hub</h2>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 20px;">Enter credentials to unlock secure workspace</p>
+        <div class="form-group">
+            <label>Mobile Number / Business Identifier</label>
+            <input type="text" id="login-ident" placeholder="e.g., Yadav Retailers">
+        </div>
+        <div class="form-group">
+            <label>Security Password / PIN</label>
+            <input type="password" id="login-pass" placeholder="••••••••">
+        </div>
+        <button style="width: 100%;" onclick="handleOpenAccess()">Verify Secure Session</button>
+    </div>
+
+    <div class="portal-container" id="portal-window">
+        <div>
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2 id="client-welcome-title">Storefront</h2>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);" id="client-id-display"></p>
+                    </div>
+                    <button style="background: #475569; font-size: 0.85rem;" onclick="window.location.reload()">Log Out</button>
+                </div>
+                <h3 style="margin-bottom: 16px; color: var(--text-muted);">Direct Factory Supply Catalog</h3>
+                <div id="customer-catalog"></div>
+                <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end;">
+                    <button class="btn-success" style="padding: 14px 28px;" onclick="submitBulkOrder()">Submit Purchase Order</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2 style="margin-bottom: 6px; font-size: 1.3rem;">Query & Support Ticket Desk</h2>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">Inquire about orders, customized metrics, or payment parameters directly</p>
+                <div class="form-group">
+                    <textarea id="query-msg" rows="3" placeholder="Type your inquiry details here..."></textarea>
+                </div>
+                <button onclick="submitSupportQuery()">Submit Inquiry Ticket</button>
+                <div id="query-history-box" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+
+        <div class="panel" style="height: max-content;">
+            <h2 style="margin-bottom: 16px; font-size: 1.3rem;">Financial Balance Sheets</h2>
+            <div class="ledger-summary">
+                <div class="ledger-box">
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">Current Balance Due</span>
+                    <h3 style="margin-top: 5px; color: #ef4444;" id="ledger-due">₹0.00</h3>
+                </div>
+                <div class="ledger-box">
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">Credit Allowed</span>
+                    <h3 style="margin-top: 5px; color: var(--success);" id="ledger-limit">₹75,000</h3>
+                </div>
+            </div>
+            <h3 style="margin-bottom: 12px; font-size: 1.1rem; color: var(--text-muted);">Order Pipeline Logs</h3>
+            <div id="history-logs"></div>
+        </div>
+    </div>
+
+    <script>
+        let activeSessionClientName = null;
+
+        function handleOpenAccess() {
+            const id = document.getElementById("login-ident").value.trim();
+            const pass = document.getElementById("login-pass").value.trim();
+            if (!id || !pass) return alert("Verify fields completely.");
+
+            // SECRET DOORWAY CHECKS: Redirects directly to admin system cleanly
+            if(id === "admin" && pass === "factory123") {
+                window.location.href = "admin.html";
+                return;
+            }
+
+            let db = JSON.parse(localStorage.getItem("dingtren_clients")) || [];
+            let match = db.find(c => c.id.toLowerCase() === id.toLowerCase());
+
+            if (match) {
+                if (match.password === pass) { activeSessionClientName = match.id; executeLogin(); } 
+                else { alert("Incorrect password profile matrix."); }
+            } else {
+                db.push({ id: id, password: pass, creditLimit: 75000, outstanding: 0 });
+                localStorage.setItem("dingtren_clients", JSON.stringify(db));
+                activeSessionClientName = id;
+                executeLogin();
+            }
+        }
+
+        function executeLogin() {
+            document.getElementById("login-window").style.display = "none";
+            document.getElementById("portal-window").style.display = "grid";
+            document.getElementById("client-welcome-title").innerText = activeSessionClientName;
+            document.getElementById("client-id-display").innerText = "B2B Profile Node Online";
+
+            renderCatalog();
+            syncCustomerDashboardView();
+            setInterval(syncCustomerDashboardView, 1500);
+        }
+
+        function renderCatalog() {
+            const inventory = JSON.parse(localStorage.getItem("dingtren_inventory")) || [];
+            document.getElementById("customer-catalog").innerHTML = inventory.map(item => `
+                <div class="catalog-item">
+                    <div>
+                        <h4 style="font-weight:600; margin-bottom:4px;">${item.name}</h4>
+                        <p style="font-size:0.85rem; color:var(--text-muted);">HSN: ${item.hsn} | Rate: <strong>₹${item.price}</strong> (+${item.gst}% GST)</p>
+                    </div>
+                    <input type="number" class="qty-input" id="qty-${item.id}" min="0" value="0">
+                </div>
+            `).join('');
+        }
+
+        function syncCustomerDashboardView() {
+            const orders = JSON.parse(localStorage.getItem("dingtren_orders")) || [];
+            const clients = JSON.parse(localStorage.getItem("dingtren_clients")) || [];
+            const queries = JSON.parse(localStorage.getItem("dingtren_queries")) || [];
+            
+            let currentProfile = clients.find(c => c.id.toLowerCase() === activeSessionClientName.toLowerCase());
+            if(currentProfile) {
+                document.getElementById("ledger-due").innerText = "₹" + currentProfile.outstanding.toFixed(2);
+                document.getElementById("ledger-limit").innerText = "₹" + currentProfile.creditLimit.toFixed(2);
+            }
+
+            const clientOrders = orders.filter(o => o.customer.trim().toLowerCase() === activeSessionClientName.trim().toLowerCase());
+            const logs = document.getElementById("history-logs");
+
+            if(clientOrders.length === 0) {
+                logs.innerHTML = "<p style='color:var(--text-muted); font-size:0.9rem;'>No transactions recorded yet.</p>";
+            } else {
+                logs.innerHTML = clientOrders.map(o => `
+                    <div class="order-history-card">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                            <strong>${o.id}</strong>
+                            <span class="badge ${o.status === 'Pending' ? 'badge-pending' : 'badge-success'}">${o.status}</span>
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:6px;">${o.items.map(i => `${i.name} (x${i.qty})`).join(', ')}</div>
+                        <strong>Total Gross Bill: ₹${o.total.toFixed(2)}</strong>
+                    </div>
+                `).reverse().join('');
+            }
+
+            const myQueries = queries.filter(q => q.customer.toLowerCase() === activeSessionClientName.toLowerCase());
+            const display = document.getElementById("query-history-box");
+            if(myQueries.length > 0) {
+                display.innerHTML = "<h4 style='margin-bottom:10px;'>Your Submitted Query Tickets</h4>" + myQueries.map(q => `
+                    <div class="query-log-card">
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:6px; color:var(--text-muted)">
+                            <span>${q.id} | ${q.timestamp}</span>
+                        </div>
+                        <p style="margin-bottom:6px;">❓ <strong>Inquiry:</strong> ${q.message}</p>
+                        <p style="color:#93c5fd; font-size:0.88rem;">📢 <strong>Reply:</strong> ${q.reply}</p>
+                    </div>
+                `).reverse().join('');
+            }
+        }
+
+        function submitBulkOrder() {
+            const inventory = JSON.parse(localStorage.getItem("dingtren_inventory")) || [];
+            let items = []; let subtotal = 0; let totalTax = 0;
+
+            inventory.forEach(item => {
+                const qty = parseInt(document.getElementById(`qty-${item.id}`).value) || 0;
+                if(qty > 0) {
+                    let cost = item.price * qty;
+                    let tax = cost * (item.gst / 100);
+                    items.push({ name: item.name, qty: qty, price: item.price, gstRate: item.gst, tax: tax, hsn: item.hsn });
+                    subtotal += cost;
+                    totalTax += tax;
+                }
+            });
+
+            if(items.length === 0) return alert("Select at least one item variant quantity.");
+            let grandTotal = subtotal + totalTax;
+
+            let currentOrders = JSON.parse(localStorage.getItem("dingtren_orders")) || [];
+            currentOrders.push({
+                id: "ORD-" + Math.floor(10000 + Math.random() * 90000),
+                customer: activeSessionClientName.trim(), 
+                items: items,
+                subtotal: subtotal,
+                tax: totalTax,
+                total: grandTotal,
+                status: "Pending"
+            });
+            
+            localStorage.setItem("dingtren_orders", JSON.stringify(currentOrders));
+            alert("Order packet successfully transmitted to the factory command room registry.");
+            inventory.forEach(item => { document.getElementById(`qty-${item.id}`).value = "0"; });
+            syncCustomerDashboardView();
+        }
+
+        function submitSupportQuery() {
+            const text = document.getElementById("query-msg").value.trim();
+            if(!text) return alert("Write an inquiry message details box before submitting.");
+
+            let queries = JSON.parse(localStorage.getItem("dingtren_queries")) || [];
+            queries.push({
+                id: "TKT-" + Math.floor(1000 + Math.random()*9000),
+                customer: activeSessionClientName.trim(),
+                message: text,
+                reply: "Pending Factory Review",
+                timestamp: new Date().toLocaleTimeString()
+            });
+
+            localStorage.setItem("dingtren_queries", JSON.stringify(queries));
+            document.getElementById("query-msg").value = "";
+            syncCustomerDashboardView();
+        }
+    </script>
+</body>
+</html>
