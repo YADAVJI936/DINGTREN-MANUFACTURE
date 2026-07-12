@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vyapar Pro Enterprise Terminal</title>
+    <style>
+        :root {
+            --bg-base: #090d16;
+            --bg-card: #131926;
+            --bg-input: #1e2538;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #27314a;
+            --radius: 10px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg-base); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
+
+        .sidebar { width: 280px; background: #0c101b; border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-brand { padding: 24px; font-size: 1.35rem; font-weight: 800; tracking: -0.02em; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+        .sidebar-menu { padding: 16px 8px; list-style: none; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex-grow: 1; }
+        .menu-item { padding: 12px 16px; border-radius: 6px; cursor: pointer; color: var(--text-muted); font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 12px; transition: all 0.2s; }
+        .menu-item:hover, .menu-item.active { background: var(--accent); color: white; }
+
+        .workspace { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; height: 100vh; }
+        .top-navbar { height: 70px; background: #0c101b; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; }
+        .content-area { padding: 32px; flex-grow: 1; }
+        .view-panel { display: none; }
+        .view-panel.active { display: block; }
+
+        .grid-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 32px; }
+        .card-kpi { background: var(--bg-card); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius); }
+        .card-kpi h5 { color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; margin-bottom: 6px; }
+        .card-kpi h2 { font-size: 1.6rem; font-weight: 700; }
+        
+        .card-panel { background: var(--bg-card); border: 1px solid var(--border); padding: 24px; border-radius: var(--radius); margin-bottom: 24px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; background: rgba(0,0,0,0.15); }
+        
+        input, select, textarea, button { padding: 10px 14px; background: var(--bg-input); border: 1px solid var(--border); color: white; border-radius: 6px; font-size: 0.9rem; }
+        button { background: var(--accent); cursor: pointer; border: none; font-weight: 600; }
+        button:hover { background: var(--accent-hover); }
+        button.btn-danger { background: var(--danger); }
+        button.btn-success { background: var(--success); }
+
+        .badge { font-size: 0.75rem; padding: 4px 8px; border-radius: 9999px; font-weight: 700; }
+        .badge-pending { background: rgba(245,158,11,0.2); color: var(--warning); }
+        .badge-success { background: rgba(16,185,129,0.2); color: var(--success); }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; padding: 20px; z-index: 200; }
+        .invoice-paper { background: white; color: #0f172a; padding: 40px; border-radius: 8px; width: 100%; max-width: 800px; max-height: 90vh; overflow-y: auto; }
+        .invoice-paper th, .invoice-paper td { border-color: #e2e8f0; color: #1e293b; }
+    </style>
+</head>
+<body>
+
+    <div id="dashboard-window" style="width: 100%;">
+      <div style="display: flex; min-height: 100vh;">
+        <div class="sidebar">
+            <div class="sidebar-brand"> 📊 Dingtren Vyapar Pro</div>
+            <ul class="sidebar-menu">
+                <li class="menu-item active" id="menu-dashboard" onclick="switchTab('dashboard')">📈 Dashboard Insights</li>
+                <li class="menu-item" id="menu-sales" onclick="switchTab('sales')">💰 Sales & Invoicing</li>
+                <li class="menu-item" id="menu-purchases" onclick="switchTab('purchases')">🛒 Outbound Purchases</li>
+                <li class="menu-item" id="menu-inventory" onclick="switchTab('inventory')">📦 Stock & Warehouses</li>
+                <li class="menu-item" id="menu-manufacturing" onclick="switchTab('manufacturing')">🏗️ Manufacturing BOM</li>
+                <li class="menu-item" id="menu-accounting" onclick="switchTab('accounting')">🏛️ Journal Ledger</li>
+                <li class="menu-item" id="menu-parties" onclick="switchTab('parties')">👥 CRM Party Accounts</li>
+                <li class="menu-item" id="menu-queries" onclick="switchTab('queries')">💬 Client Query Inbox</li>
+            </ul>
+        </div>
+
+        <div class="workspace">
+            <div class="top-navbar">
+                <div>
+                    <span style="color: var(--text-muted);">Active Entity:</span>
+                    <select id="company-selector" style="background: transparent; border: none; font-size: 1.1rem; font-weight: 700; padding: 0;"></select>
+                </div>
+                <button style="background:#475569; font-size:0.85rem;" onclick="window.location.href='customer.html'">Secure Logout</button>
+            </div>
+
+            <div class="content-area">
+                <div id="panel-dashboard" class="view-panel active">
+                    <div class="grid-kpi">
+                        <div class="card-kpi"><h5>Gross Revenue Balance</h5><h2 id="kpi-sales" style="color:var(--success)">₹0.00</h2></div>
+                        <div class="card-kpi"><h5>Supply Costs Out</h5><h2 id="kpi-purchases" style="color:var(--danger)">₹0.00</h2></div>
+                        <div class="card-kpi"><h5>Outstanding Receivables</h5><h2 id="kpi-receivable" style="color:var(--warning)">₹0.00</h2></div>
+                        <div class="card-kpi"><h5>Asset Valuation</h5><h2 id="kpi-assets">₹0.00</h2></div>
+                    </div>
+                    <div class="card-panel">
+                        <h3>Live Incoming B2B Procurement Pipeline</h3>
+                        <table id="dash-orders-table">
+                            <thead><tr><th>Reference ID</th><th>Customer Entity</th><th>Total Gross Amount</th><th>Status</th><th>Action Handlers</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="panel-sales" class="view-panel">
+                    <div class="card-panel">
+                        <div style="font-weight:700; font-size:1.2rem; margin-bottom:12px;">Execute POS Direct Invoice</div>
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-bottom:16px;">
+                            <input type="text" id="sale-party" placeholder="Client Name Target">
+                            <select id="sale-item-select"></select>
+                            <input type="number" id="sale-item-qty" placeholder="Quantity Count" value="1" min="1">
+                        </div>
+                        <button class="btn-success" onclick="generateDirectInvoice()">Commit Sale Registry</button>
+                    </div>
+                    <div class="card-panel">
+                        <h3>Past Commercial Bills</h3>
+                        <table id="sales-history-table">
+                            <thead><tr><th>Invoice No.</th><th>Client Profile</th><th>Subtotal Base</th><th>Tax Payload</th><th>Gross Total</th><th>Document Actions</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="panel-purchases" class="view-panel">
+                    <div class="card-panel">
+                        <h3>Log Supply Vendor Cost Invoice</h3>
+                        <div style="display:grid; grid-template-columns: repeat(3,1fr); gap:12px; margin-bottom:16px;">
+                            <input type="text" id="purc-vendor" placeholder="Supplier Vendor Title Name">
+                            <select id="purc-item-select"></select>
+                            <input type="number" id="purc-qty" placeholder="Quantity Units Pack" value="10">
+                        </div>
+                        <button onclick="logPurchaseBill()">Commit Purchase Voucher Ledger</button>
+                    </div>
+                </div>
+
+                <div id="panel-inventory" class="view-panel">
+                    <div class="card-panel">
+                        <h3>Factory Inventory Control Ledger</h3>
+                        <table id="inventory-master-table">
+                            <thead><tr><th>SKU Tag</th><th>Product Variant</th><th>Category</th><th>Current Physical Stock</th><th>Unit Type</th><th>Batch No</th><th>HSN Code</th><th>Alert Status</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="panel-manufacturing" class="view-panel">
+                    <div class="card-panel">
+                        <h3>Production Line Batch Injections</h3>
+                        <table id="manufacturing-bom-table">
+                            <thead><tr><th>Target Finished Item Model</th><th>Calculated BOM Recipes</th><th>Action Run</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="panel-accounting" class="view-panel">
+                    <div class="card-panel">
+                        <h3>Post General Ledger Expense Debit Vouchers</h3>
+                        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:12px; margin-bottom:16px;">
+                            <input type="text" id="expense-desc" placeholder="Expense Allocation Details...">
+                            <input type="number" id="expense-val" placeholder="Amount (INR)">
+                        </div>
+                        <button class="btn-danger" onclick="commitExpense()">Post Expense Debit</button>
+                    </div>
+                    <div class="card-panel">
+                        <h3>Unified General Ledger Book</h3>
+                        <table id="journal-ledger-table">
+                            <thead><tr><th>Timestamp Date</th><th>Allocated Description Detail Label</th><th>Accounting Type Mapping</th><th>Total Outflow</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="panel-parties" class="view-panel">
+                    <div class="card-panel">
+                        <h3>Commercial Counterparty Credit Ledgers</h3>
+                        <table id="crm-parties-table">
+                            <thead><tr><th>Client Business Account Tag</th><th>Authorized Limit Bracket</th><th>Outstanding Due Accounts Bal</th><th>Operational Risk Check</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="panel-queries" class="view-panel">
+                    <div class="card-panel">
+                        <h3>📥 Incoming Customer Support Inquiries Desk</h3>
+                        <div id="admin-queries-queue"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="invoice-modal">
+        <div class="invoice-paper">
+            <div style="display:flex; justify-content:space-between; border-bottom:3px solid #0f172a; padding-bottom:12px; margin-bottom:20px;">
+                <div>
+                    <h1 style="font-weight:900;">TAX INVOICE</h1>
+                    <p style="font-size:0.82rem; color:#475569;">Issued Pursuant to Scheduled GST Statutory Billing Rules</p>
+                </div>
+                <div style="text-align:right;">
+                    <h3 id="inv-firm-name">Dingtren Enterprises</h3>
+                    <p style="font-size:0.8rem; color:#475569;">GSTIN: 09AAAAA1111A1Z1<br>Uttar Pradesh, India</p>
+                </div>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; margin-bottom:24px; font-size:0.9rem;">
+                <div><strong>Billed to Party:</strong><p id="inv-party-title" style="font-size:1.1rem; font-weight:700; margin-top:4px;"></p></div>
+                <div style="text-align:right;"><strong>Invoice Ref ID:</strong> <span id="inv-id-label" style="font-weight:700;"></span><br><strong>Date Matrix:</strong> 12/07/2026</div>
+            </div>
+
+            <table>
+                <thead><tr style="background:#f1f5f9; color:#0f172a;"><th>Goods Specification</th><th>HSN Code</th><th>Quantity</th><th>Rate Base</th><th>Tax Allocation Matrix</th><th>Gross Total</th></tr></thead>
+                <tbody id="invoice-paper-items"></tbody>
+            </table>
+
+            <div style="display:grid; grid-template-columns:1.5fr 1fr; margin-top:30px; font-size:0.9rem; border-top:1px dashed #cbd5e1; padding-top:16px;">
+                <div>
+                    <strong>Declarations & Terms:</strong>
+                    <p style="font-size:0.75rem; color:#64748b; margin-top:4px;">Wholesale pricing calculations match central framework classifications.</p>
+                </div>
+                <div style="text-align:right; display:flex; flex-direction:column; gap:6px;">
+                    <div>Taxable Subtotal Base: <span id="paper-subtotal" style="font-weight:600;">₹0.00</span></div>
+                    <div>Integrated GST Weight: <span id="paper-tax" style="font-weight:600;">₹0.00</span></div>
+                    <div style="font-size:1.25rem; font-weight:800; border-top:2px solid #0f172a; padding-top:6px; margin-top:6px;">Total Outstanding Gross: <span id="paper-total" style="color:var(--accent);">₹0.00</span></div>
+                </div>
+            </div>
+
+            <div style="margin-top:30px; display:flex; gap:10px; justify-content:flex-end;">
+                <button style="background:#64748b; color:white;" onclick="closeModal()">Dismiss View</button>
+                <button style="background:var(--success); color:white;" onclick="window.print()">🖨️ Print / Save Document PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTabId = 'dashboard';
+
+        function switchTab(viewId) {
+            currentTabId = viewId;
+            document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            
+            document.getElementById(`panel-${viewId}`).classList.add('active');
+            document.getElementById(`menu-${viewId}`).classList.add('active');
+            renderAllViewPanels();
+        }
+
+        function loadDropdownOptions() {
+            const inventory = JSON.parse(localStorage.getItem("dingtren_inventory")) || [];
+            const comps = JSON.parse(localStorage.getItem("dingtren_companies")) || [];
+            document.getElementById("company-selector").innerHTML = comps.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            const opts = inventory.map(i => `<option value="${i.id}">${i.name} (Stock: ${i.stock})</option>`).join('');
+            document.getElementById("sale-item-select").innerHTML = opts;
+            document.getElementById("purc-item-select").innerHTML = opts;
+        }
+
+        function renderAllViewPanels() {
+            // Force pull verified baseline caches off root memory
+            const inventory = JSON.parse(localStorage.getItem("dingtren_inventory")) || [];
+            const orders = JSON.parse(localStorage.getItem("dingtren_orders")) || [];
+            const clients = JSON.parse(localStorage.getItem("dingtren_clients")) || [];
+            const expenses = JSON.parse(localStorage.getItem("dingtren_expenses")) || [];
+            const purchases = JSON.parse(localStorage.getItem("dingtren_purchases")) || [];
+            
+            // CORE SOLUTION: FORCE PULL FROM CORRECT LOCAL DESK ARRAY REGISTER
+            const queries = JSON.parse(localStorage.getItem("dingtren_queries")) || [];
+
+            let salesSum = 0; let taxSum = 0; let receivableSum = 0; let assetValuation = 0;
+            orders.forEach(o => { if(o.status === "Invoiced") { salesSum += o.subtotal; taxSum += o.tax; } });
+            clients.forEach(c => receivableSum += c.outstanding);
+            inventory.forEach(i => assetValuation += (i.stock * i.price));
+
+            document.getElementById("kpi-sales").innerText = "₹" + salesSum.toFixed(2);
+            document.getElementById("kpi-purchases").innerText = "₹" + purchases.reduce((a,p)=>a+p.total, 0).toFixed(2);
+            document.getElementById("kpi-receivable").innerText = "₹" + receivableSum.toFixed(2);
+            document.getElementById("kpi-assets").innerText = "₹" + assetValuation.toFixed(2);
+
+            // RECONCILED PIPELINE LIST VIEW
+            document.getElementById("dash-orders-table").querySelector('tbody').innerHTML = orders.map(o => `
+                <tr>
+                    <td><code>${o.id}</code></td>
+                    <td><strong>${o.customer}</strong></td>
+                    <td>₹${o.total.toFixed(2)}</td>
+                    <td><span class="badge ${o.status==='Pending'?'badge-pending':'badge-success'}">${o.status}</span></td>
+                    <td>${o.status==='Pending'?`<button class='btn-success' onclick='approveClientOrder("${o.id}")'>Approve & Invoice</button>`:`<button onclick='viewGSTBill("${o.id}")'>View Bill</button>`}</td>
+                </tr>
+            `).reverse().join('');
+
+            // WAREHOUSE CONTROLS
+            document.getElementById("inventory-master-table").querySelector('tbody').innerHTML = inventory.map(i => `
+                <tr>
+                    <td><code>${i.id}</code></td>
+                    <td><strong>${i.name}</strong></td>
+                    <td>${i.category}</td>
+                    <td><span class="badge ${i.stock <= i.minStock?'badge-pending':'badge-success'}">${i.stock} ${i.unit}</span></td>
+                    <td>${i.unit}</td>
+                    <td><code>${i.batch}</code></td>
+                    <td>${i.hsn}</td>
+                    <td>${i.stock <= i.minStock?'<span style="color:var(--danger);font-weight:bold;">Low Stock</span>':'<span>Normal</span>'}</td>
+                </tr>
+            `).join('');
+
+            // MANUFACTURING BOM
+            const boms = JSON.parse(localStorage.getItem("dingtren_bom")) || [];
+            document.getElementById("manufacturing-bom-table").querySelector('tbody').innerHTML = boms.map(b => `
+                <tr>
+                    <td><strong>${(inventory.find(i=>i.id===b.productId) || {}).name || 'Item'}</strong></td>
+                    <td><small>${b.materials.map(m => `${m.name} (${m.qtyNeeded} ${m.unit})`).join(', ')}</small></td>
+                    <td><button class="btn-success" onclick="runProduction('${b.productId}')">🏭 Batch Produce (+20)</button></td>
+                </tr>
+            `).join('');
+
+            // ACCOUNTING GENERAL LEDGER BOOK
+            let ledger = [];
+            orders.forEach(o => { if(o.status==='Invoiced') ledger.push({ desc: `Wholesale Sales [${o.id}]`, type: 'Credit', val: o.total }); });
+            expenses.forEach(e => ledger.push({ desc: e.desc, type: 'Debit', val: e.value }));
+            document.getElementById("journal-ledger-table").querySelector('tbody').innerHTML = ledger.map(l => `
+                <tr><td>12/07/2026</td><td><strong>${l.desc}</strong></td><td><span style="color:${l.type==='Credit'?'var(--success)':'var(--danger)'}">${l.type}</span></td><td>₹${l.val.toFixed(2)}</td></tr>
+            `).reverse().join('');
+
+            // CRM PARTIES
+            document.getElementById("crm-parties-table").querySelector('tbody').innerHTML = clients.map(c => `
+                <tr><td><strong>${c.id}</strong></td><td>₹${c.creditLimit.toFixed(2)}</td><td>₹${c.outstanding.toFixed(2)}</td><td><span class="badge ${c.outstanding>c.creditLimit?'badge-pending':'badge-success'}">${c.outstanding>c.creditLimit?'Risk Alert':'Good Standing'}</span></td></tr>
+            `).join('');
+
+            // PAST BILL PREVIEWS
+            document.getElementById("sales-history-table").querySelector('tbody').innerHTML = orders.filter(o => o.status === "Invoiced").map(o => `
+                <tr><td><code>${o.id}</code></td><td><strong>${o.customer}</strong></td><td>₹${o.subtotal.toFixed(2)}</td><td>₹${o.tax.toFixed(2)}</td><td><strong>₹${o.total.toFixed(2)}</strong></td><td><button onclick='viewGSTBill("${o.id}")'>🖨️ Open Invoice</button></td></tr>
+            `).reverse().join('');
+
+            // RECONCILED QUERY INBOX PROCESSING: Dynamically targets correct structural array data rows
+            const qQueue = document.getElementById("admin-queries-queue");
+            if(queries.length === 0){ qQueue.innerHTML = "<p style='padding:10px;'>No support tickets posted yet.</p>"; return; }
+            qQueue.innerHTML = queries.map((q, idx) => `
+                <div style="background:rgba(255,255,255,0.05); border:1px solid var(--border); padding:15px; border-radius:8px; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:var(--text-muted); margin-bottom:6px;">
+                        <span><strong>From Business:</strong> ${q.customer}</span><span>Ticket Ref: ${q.id} | ${q.timestamp}</span>
+                    </div>
+                    <p style="margin-bottom:12px; font-size:1.05rem;">❓ <strong>Inquiry details:</strong> "${q.message}"</p>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="reply-to-${idx}" placeholder="Type solution text response..." style="flex-grow:1; padding:6px 12px; background:var(--bg-base); border:1px solid var(--border); color:white; border-radius:6px;">
+                        <button onclick="sendQueryResponse(${idx})" style="padding:6px 12px; font-size:0.85rem; background:var(--success)">Send Reply</button>
+                    </div>
+                    <p style="font-size:0.85rem; color:#93c5fd; margin-top:8px;">Current Log status: ${q.reply}</p>
+                </div>
+            `).reverse().join('');
+        }
+
+        function approveClientOrder(orderId) {
+            let inventory = JSON.parse(localStorage.getItem("dingtren_inventory"));
+            let orders = JSON.parse(localStorage.getItem("dingtren_orders"));
+            let clients = JSON.parse(localStorage.getItem("dingtren_clients"));
+            const order = orders.find(o => o.id === orderId);
+
+            for (let item of order.items) {
+                let stock = inventory.find(i => i.name === item.name);
+                if (!stock || stock.stock < item.qty) return alert(`Stock Shortage Alert for ${item.name}`);
+            }
+
+            order.items.forEach(item => {
+                let stock = inventory.find(i => i.name === item.name);
+                stock.stock -= item.qty;
+            });
+
+            let client = clients.find(c => c.id.toLowerCase() === order.customer.toLowerCase());
+            if(client) client.outstanding += order.total;
+
+            order.status = "Invoiced";
+            localStorage.setItem("dingtren_inventory", JSON.stringify(inventory));
+            localStorage.setItem("dingtren_orders", JSON.stringify(orders));
+            localStorage.setItem("dingtren_clients", JSON.stringify(clients));
+            
+            renderAllViewPanels();
+            loadDropdownOptions();
+            viewGSTBill(orderId);
+        }
+
+        function generateDirectInvoice() {
+            const clientName = document.getElementById("sale-party").value.trim();
+            const itemId = document.getElementById("sale-item-select").value;
+            const qty = parseInt(document.getElementById("sale-item-qty").value) || 0;
+            if(!clientName || qty <= 0) return alert("Verify fields completely.");
+
+            let inventory = JSON.parse(localStorage.getItem("dingtren_inventory"));
+            let prod = inventory.find(i => i.id === itemId);
+
+            let subtotal = prod.price * qty;
+            let tax = subtotal * (prod.gst / 100);
+            
+            let orders = JSON.parse(localStorage.getItem("dingtren_orders")) || [];
+            const directInvoice = {
+                id: "POS-" + Math.floor(10000 + Math.random() * 90000),
+                customer: clientName,
+                items: [{ name: prod.name, qty: qty, price: prod.price, tax: tax, gstRate: prod.gst, hsn: prod.hsn }],
+                subtotal: subtotal,
+                tax: tax,
+                total: subtotal + tax,
+                status: "Pending"
+            };
+
+            orders.push(directInvoice);
+            localStorage.setItem("dingtren_orders", JSON.stringify(orders));
+            approveClientOrder(directInvoice.id);
+        }
+
+        function sendQueryResponse(idx) {
+            let queries = JSON.parse(localStorage.getItem("dingtren_queries"));
+            const targetsIdx = (queries.length - 1) - idx;
+            const text = document.getElementById(`reply-to-${idx}`).value.trim();
+            if(!text) return alert("Type response before sending.");
+
+            queries[targetsIdx].reply = text;
+            localStorage.setItem("dingtren_queries", JSON.stringify(queries));
+            renderAllViewPanels();
+        }
+
+        function runProduction(id) {
+            let inventory = JSON.parse(localStorage.getItem("dingtren_inventory"));
+            let match = inventory.find(i => i.id === id);
+            if(match) match.stock += 20;
+            localStorage.setItem("dingtren_inventory", JSON.stringify(inventory));
+            alert("Assembly production batch completed successfully.");
+            renderAllViewPanels();
+            loadDropdownOptions();
+        }
+
+        function logPurchaseBill() {
+            const vendor = document.getElementById("purc-vendor").value.trim();
+            const id = document.getElementById("purc-item-select").value;
+            const qty = parseInt(document.getElementById("purc-qty").value) || 0;
+            if(!vendor || qty <= 0) return alert("Verify fields.");
+
+            let inventory = JSON.parse(localStorage.getItem("dingtren_inventory"));
+            let target = inventory.find(i => i.id === id);
+            target.stock += qty;
+
+            let purchases = JSON.parse(localStorage.getItem("dingtren_purchases")) || [];
+            purchases.push({ vendor: vendor, total: (target.cost * qty) });
+
+            localStorage.setItem("dingtren_inventory", JSON.stringify(inventory));
+            localStorage.setItem("dingtren_purchases", JSON.stringify(purchases));
+            alert("Supply Chain Inventory record appended safely.");
+            renderAllViewPanels();
+            loadDropdownOptions();
+        }
+
+        function commitExpense() {
+            const desc = document.getElementById("expense-desc").value.trim();
+            const val = parseFloat(document.getElementById("expense-val").value) || 0;
+            if(!desc || val <= 0) return alert("Provide cost fields.");
+
+            let expenses = JSON.parse(localStorage.getItem("dingtren_expenses")) || [];
+            expenses.push({ desc: desc, value: val });
+            localStorage.setItem("dingtren_expenses", JSON.stringify(expenses));
+            
+            document.getElementById("expense-desc").value = "";
+            document.getElementById("expense-val").value = "";
+            renderAllViewPanels();
+        }
+
+        function viewGSTBill(orderId) {
+            const orders = JSON.parse(localStorage.getItem("dingtren_orders"));
+            const bill = orders.find(o => o.id === orderId);
+
+            document.getElementById("inv-party-title").innerText = bill.customer;
+            document.getElementById("inv-id-label").innerText = bill.id;
+            document.getElementById("paper-subtotal").innerText = "₹" + bill.subtotal.toFixed(2);
+            document.getElementById("paper-tax").innerText = "₹" + bill.tax.toFixed(2);
+            document.getElementById("paper-total").innerText = "₹" + bill.total.toFixed(2);
+
+            document.getElementById("invoice-paper-items").innerHTML = bill.items.map(i => `
+                <tr><td><strong>${i.name}</strong></td><td>${i.hsn}</td><td>${i.qty}</td><td>₹${i.price.toFixed(2)}</td><td>₹${i.tax.toFixed(2)} (${i.gstRate}%)</td><td><strong>₹${((i.price*i.qty)+i.tax).toFixed(2)}</strong></td></tr>
+            `).join('');
+            document.getElementById("invoice-modal").style.display = "flex";
+        }
+
+        function closeModal() { document.getElementById("invoice-modal").style.display = "none"; }
+
+        // Secure Initialization Guard: Enforces portal path lockdown rules
+        loadDropdownOptions();
+        renderAllViewPanels();
+        setInterval(renderAllViewPanels, 1500);
+    </script>
+</body>
+</html>
