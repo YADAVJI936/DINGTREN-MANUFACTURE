@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dingtren Enterprise ERP - Hub Launchpad</title>
+    <style>
+        :root {
+            --bg: #090d16;
+            --surface: #131926;
+            --accent: #2563eb;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #27314a;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .launcher-card {
+            background: var(--surface);
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 480px;
+            width: 100%;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        h1 { margin-bottom: 8px; font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
+        p { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 30px; }
+        .btn-group { display: flex; flex-direction: column; gap: 14px; }
+        .btn {
+            padding: 16px;
+            font-size: 1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+            text-align: center;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-client { background: var(--accent); }
+        .btn-admin { background: #0f172a; border: 1px solid var(--border); }
+        .btn:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+
+    <div class="launcher-card">
+        <h1>Dingtren Factory Hub</h1>
+        <p>Unified Enterprise Cross-Window Architecture</p>
+        
+        <div class="btn-group">
+            <a href="customer.html" target="_blank" class="btn btn-client">📱 Open B2B Customer Portal</a>
+            <a href="admin.html" target="_blank" class="btn btn-admin">🏭 Open Master Vyapar Admin Desk</a>
+        </div>
+    </div>
+
+    <script>
+        // Set up the global storage baseline schema if it doesn't exist
+        (function initializeEnterpriseStorage() {
+            const defaultInventory = [
+                { id: "PROD-001", name: "Premium Storage Organizer Box", price: 450, cost: 280, stock: 120, minStock: 30, hsn: "39269099", gst: 18, category: "Storage Solutions", brand: "Dingtren", batch: "B-2026-A", unit: "Pcs" },
+                { id: "PROD-002", name: "4-Lid Specialized Bangle Box", price: 320, cost: 190, stock: 85, minStock: 25, hsn: "39231090", gst: 12, category: "Storage Solutions", brand: "Dingtren", batch: "B-2026-B", unit: "Pcs" },
+                { id: "PROD-003", name: "Classic Streetwear Sneakers (V1)", price: 899, cost: 450, stock: 40, minStock: 10, hsn: "64041190", gst: 18, category: "Footwear", brand: "Dingtren", batch: "FT-992", unit: "Pairs" }
+            ];
+
+            const defaultBOM = [
+                { productId: "PROD-001", materials: [{ name: "Acrylic Sheets", qtyNeeded: 2, unit: "Sheets" }, { name: "Steel Hinge Lock", qtyNeeded: 4, unit: "Pcs" }] }
+            ];
+
+            const defaultAccounts = { cashInHand: 24500, bankBalance: 382000, walletBalance: 12500 };
+            const defaultCompanies = [{ id: "COMP-01", name: "Dingtren Enterprises" }, { id: "COMP-02", name: "RHD Horror Media Operations" }];
+            const defaultClients = [{ id: "Yadav Retailers", password: "client123", creditLimit: 75000, outstanding: 0 }];
+
+            if (!localStorage.getItem("dingtren_inventory")) localStorage.setItem("dingtren_inventory", JSON.stringify(defaultInventory));
+            if (!localStorage.getItem("dingtren_bom")) localStorage.setItem("dingtren_bom", JSON.stringify(defaultBOM));
+            if (!localStorage.getItem("dingtren_accounts")) localStorage.setItem("dingtren_accounts", JSON.stringify(defaultAccounts));
+            if (!localStorage.getItem("dingtren_companies")) localStorage.setItem("dingtren_companies", JSON.stringify(defaultCompanies));
+            if (!localStorage.getItem("dingtren_clients")) localStorage.setItem("dingtren_clients", JSON.stringify(defaultClients));
+            if (!localStorage.getItem("dingtren_orders")) localStorage.setItem("dingtren_orders", JSON.stringify([]));
+            if (!localStorage.getItem("dingtren_expenses")) localStorage.setItem("dingtren_expenses", JSON.stringify([]));
+            if (!localStorage.getItem("dingtren_purchases")) localStorage.setItem("dingtren_purchases", JSON.stringify([]));
+        })();
+    </script>
+</body>
+</html>
